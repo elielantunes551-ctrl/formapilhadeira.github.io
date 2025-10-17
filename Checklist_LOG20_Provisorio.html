@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check List LOG20 - Provisório</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+  header { background: #0b344a; color: white; text-align: center; padding: 10px; }
+  img.logo { max-width: 180px; margin: 10px auto; display: block; }
+  .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  label { font-weight: bold; display: block; margin-top: 10px; }
+  input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; }
+  button { background: #d27d00; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 16px; margin-top: 15px; cursor: pointer; }
+  button:hover { background: #b36b00; }
+  .item { margin-top: 15px; }
+  .buttons { margin-top: 5px; }
+  .buttons button { width: 48%; margin-right: 2%; }
+  #checklist, #resultado { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <img src="https://files.catbox.moe/b2d6hz.png" alt="LOG20 Logo" class="logo">
+  <h2>Check List LOG20 - Provisório</h2>
+</header>
+
+<div class="container" id="inicio">
+  <label>Nome do Operador:</label>
+  <input type="text" id="operador" required>
+
+  <label>Número da Máquina:</label>
+  <input type="text" id="maquina" required>
+
+  <button onclick="iniciarChecklist()">Iniciar Checklist</button>
+</div>
+
+<div class="container" id="checklist">
+  <h3>Checklist de Empilhadeira</h3>
+  <div id="itens"></div>
+  <button onclick="finalizarChecklist()">Finalizar e Gerar Relatório</button>
+</div>
+
+<div class="container" id="resultado">
+  <h3>Relatório Gerado</h3>
+  <p id="relatorio"></p>
+</div>
+
+<script>
+const itensChecklist = [
+  'Nível de óleo do motor adequado?',
+  'Freio funcionando corretamente?',
+  'Faróis e sinalização operantes?',
+  'Pneus em boas condições?',
+  'Garfo sem trincas ou deformações?',
+  'Buzina funcionando?',
+  'Cinto de segurança em bom estado?',
+  'Sem vazamentos visíveis?',
+  'Documentação da máquina em dia?'
+];
+
+function iniciarChecklist() {
+  const operador = document.getElementById('operador').value.trim();
+  const maquina = document.getElementById('maquina').value.trim();
+  if (!operador || !maquina) {
+    alert('Preencha todos os campos antes de iniciar.');
+    return;
+  }
+  document.getElementById('inicio').style.display = 'none';
+  document.getElementById('checklist').style.display = 'block';
+  const container = document.getElementById('itens');
+  container.innerHTML = '';
+  itensChecklist.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.classList.add('item');
+    div.innerHTML = `<label>${item}</label>
+    <div class='buttons'>
+      <button onclick="responder(${i}, 'Sim')">Sim</button>
+      <button onclick="responder(${i}, 'Não')">Não</button>
+    </div>`;
+    container.appendChild(div);
+  });
+}
+
+const respostas = {};
+function responder(i, valor) {
+  respostas[i] = valor;
+}
+
+function finalizarChecklist() {
+  const operador = document.getElementById('operador').value;
+  const maquina = document.getElementById('maquina').value;
+  const dataHora = new Date().toLocaleString('pt-BR');
+  let texto = `Check List LOG20 - Provisório\nOperador: ${operador}\nMáquina: ${maquina}\nData/Hora: ${dataHora}\n\nResultados:\n`;
+  itensChecklist.forEach((item, i) => {
+    texto += `${item}: ${respostas[i] || 'Não respondido'}\n`;
+  });
+
+  document.getElementById('checklist').style.display = 'none';
+  document.getElementById('resultado').style.display = 'block';
+  document.getElementById('relatorio').innerText = 'Relatório PDF sendo gerado...';
+
+  const blob = new Blob([texto], { type: 'application/pdf' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Checklist_LOG20_${dataHora.replace(/\W/g, '_')}.pdf`;
+  link.click();
+  document.getElementById('relatorio').innerText = 'Relatório PDF salvo com sucesso!';
+}
+</script>
+</body>
+</html>
