@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Checklist Empilhadeira - log20 checklist </title>
+
+<!-- Mantive suas cores atuais, apenas adicionei pequenos destaques visuais -->
+<style>
+  body { font-family: Arial, sans-serif; background: #0d1f0d; color: #fff; margin: 0; padding: 20px; }
+  h2 { text-align: center; }
+  .container { max-width: 700px; margin: auto; background: #1f3b1f; padding: 20px; border-radius: 10px; }
+  input, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: none; box-sizing: border-box; }
+  button { background: #198754; color: white; font-weight: bold; cursor: pointer; }
+  button:hover { background: #157347; }
+  .item { margin-bottom: 12px; padding: 12px; background: #2e4c2e; border-radius: 6px; }
+  label { display: block; margin-bottom: 6px; font-weight: bold; }
+  .btn-group { display: flex; justify-content: space-between; gap: 4px; }
+  .btn-group button { width: 48%; transition: all 0.12s ease-in-out; padding: 10px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+  .btn-yes { background: #28a745; color: #fff; }
+  .btn-no { background: #dc3545; color: #fff; }
+  /* mais destaque ao ativo sem mudar cor-base */
+  .btn-yes.active { background: #3cd65a; box-shadow: 0 0 12px rgba(40,167,69,0.8); transform: scale(1.03); }
+  .btn-no.active { background: #ff4d4d; box-shadow: 0 0 12px rgba(220,53,69,0.85); transform: scale(1.03); }
+  .hidden { display: none; }
+  .date-time { text-align: center; font-size: 14px; margin-top: 10px; color: #ccc; }
+
+  /* descrição do problema */
+  .desc-wrap { margin-top: 10px; }
+  .desc-wrap textarea { min-height: 70px; resize: vertical; }
+
+  /* pequenos avisos */
+  .small { font-size: 13px; color: #d1d1d1; margin-top: 6px; }
+
+  /* responsividade */
+  @media (max-width: 480px) {
+    .container { padding: 14px; }
+    .btn-group button { font-size: 14px; padding: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PÁGINA INICIAL -->
+<div id="pagina-inicial" class="container">
+  <h2>Checklist Diário - Empilhadeira Log20 </h2>
+  <label>Nome do Operador:</label>
+  <input id="operador" type="text" placeholder="Digite o nome do operador" />
+
+  <label>Número da Máquina:</label>
+  <input id="maquina" type="text" placeholder="Digite o número da máquina" />
+
+  <label>Horímetro:</label>
+  <input id="horimetro" type="number" step="0.1" placeholder="ex: 3456.7" min="0" />
+
+  <button id="btn-iniciar" onclick="iniciarChecklist()">Iniciar Checklist</button>
+  <div class="small">Preencha os campos acima e clique em "Iniciar Checklist".</div>
+</div>
+
+<!-- PÁGINA DO CHECKLIST -->
+<div id="pagina-checklist" class="container hidden">
+  <h2>Checklist Diário</h2>
+  <div class="date-time" id="dataHora"></div>
+  <div id="infoOperador" class="small"></div>
+  <div id="checklist"></div>
+  <button id="btn-pdf" onclick="gerarPDF()">Gerar Relatório (PDF)</button>
+  <div class="small" style="margin-top:8px;">Observação: itens marcados como <strong>Não</strong> precisam de descrição antes de gerar PDF.</div>
+  <div style="margin-top:8px;">
+    <button onclick="voltarInicio()" style="background:#6c757d;">Voltar</button>
+  </div>
+</div>
+
+<!-- libs: jsPDF + autoTable (para tabela no PDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+  const { jsPDF } = window.jspdf;
+
+  const perguntas = [
+    "Pontos de apoio estão OK?",
+    "Painel de instrumentos está OK?",
+    "Sensor de banco está OK?",
+    "Cinto de segurança está ok",
+    "Buzina está OK?",
+    "Sensor de cinto está OK? (corta acelerãção ou delisga maquina quando remivido cinto?)",
+    "Limpador de para-brisas está OK?",
+    "Para-brisa e teto estão OK?",
+    "Retrovisores estão OK?",
+    "Freios estão OK?",
+    "Extintor (validade, lacre e carga) está OK?",
+    "LEDs laterais estão OK?",
+    "Blue Spot está OK?",
+    "Lâmpadas dianteiras estão OK?",
+    "Lâmpadas traseiras estão OK?",
+    "Sirene de ré está OK?",
+    "Ausência de vazamento de óleo?",
+    "Mangueiras da torre estão OK?",
+    "Garfo (gdi) está OK?",
+    "Pneus estão OK?",
+    "Rodas (trincas e parafusos) estão OK?"
+  ];
+
+  // manter respostas e descrições
+  const respostas = {};
+  const descricoes = {};
+  let dataHoraAtual = "";
+
+  function obterDataHora() {
+    const agora = new Date();
+    const data = agora.toLocaleDateString('pt-BR');
+    const hora = agora.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+    return `${data} - ${hora}`;
+  }
+
+  function iniciarChecklist() {
+    const operador = document.getElementById("operador").value.trim();
+    const maquina = document.getElementById("maquina").value.trim();
+    const horimetro = document.getElementById("horimetro").value.trim();
+
+    if (!operador || !maquina || horimetro === "") {
+      alert("Por favor, preencha o nome do operador, número da máquina e o horímetro.");
+      return;
+    }
+
+    // exibir página checklist
+    document.getElementById("pagina-inicial").classList.add("hidden");
+    document.getElementById("pagina-checklist").classList.remove("hidden");
+
+    dataHoraAtual = obterDataHora();
+    document.getElementById("dataHora").innerText = `Data e hora do checklist: ${dataHoraAtual}`;
+
+    // mostrar info do operador
+    document.getElementById("infoOperador").innerText = `Operador: ${operador}  —  Máquina: ${maquina}  —  Horímetro: ${horimetro}`;
+
+    // criar itens
+    const checklistDiv = document.getElementById("checklist");
+    checklistDiv.innerHTML = "";
+
+    perguntas.forEach((p, i) => {
+      // inicializa
+      respostas[p] = 'Não respondido';
+      descricoes[p] = '';
+
+      const div = document.createElement("div");
+      div.className = "item";
+      div.id = `item-${i}`;
+
+      div.innerHTML = `
+        <label>${p}</label>
+        <div class="btn-group">
+          <button id="sim${i}" class="btn-yes" onclick="responder(${i}, 'Sim')">Sim</button>
+          <button id="nao${i}" class="btn-no" onclick="responder(${i}, 'Não')">Não</button>
+        </div>
+        <div class="desc-wrap hidden" id="desc-wrap-${i}">
+          <label>Descreva o problema (obrigatório se NÃO):</label>
+          <textarea id="desc-${i}" placeholder="Descreva o problema..."></textarea>
+        </div>
+      `;
+
+      checklistDiv.appendChild(div);
+
+      // detectar input de descrição para salvar em tempo real
+      setTimeout(()=> {
+        const ta = document.getElementById(`desc-${i}`);
+        ta.addEventListener('input', (e)=> {
+          descricoes[p] = e.target.value.trim();
+        });
+      }, 50);
+    });
+
+    // rolar para cima (útil em mobile)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function responder(indice, valor) {
+    const p = perguntas[indice];
+    respostas[p] = valor;
+
+    const btnSim = document.getElementById("sim" + indice);
+    const btnNao = document.getElementById("nao" + indice);
+    const descWrap = document.getElementById("desc-wrap-" + indice);
+    const descTextarea = document.getElementById("desc-" + indice);
+
+    // remover classes active
+    btnSim.classList.remove("active");
+    btnNao.classList.remove("active");
+
+    if (valor === "Sim") {
+      btnSim.classList.add("active");
+      // esconder descrição se houver
+      if (descWrap) {
+        descWrap.classList.add("hidden");
+        if (descTextarea) {
+          descricoes[p] = ""; // limpa descrição quando volta a OK
+          descTextarea.value = "";
+        }
+      }
+    } else {
+      btnNao.classList.add("active");
+      // mostrar descrição
+      if (descWrap) {
+        descWrap.classList.remove("hidden");
+        // colocar foco (ajuda no mobile)
+        setTimeout(()=> { descTextarea.focus(); }, 100);
+      }
+    }
+  }
+
+  function voltarInicio() {
+    // limpa e volta
+    document.getElementById("pagina-checklist").classList.add("hidden");
+    document.getElementById("pagina-inicial").classList.remove("hidden");
+  }
+
+  function gerarPDF() {
+    // validação: todos os itens que têm 'Não' precisam de descrição
+    for (let i = 0; i < perguntas.length; i++) {
+      const p = perguntas[i];
+      if (respostas[p] === 'Não') {
+        const desc = descricoes[p] || document.getElementById(`desc-${i}`)?.value.trim() || '';
+        if (!desc) {
+          alert(`Por favor, descreva o problema para: "${p}" antes de gerar o PDF.`);
+          // focar no campo
+          const wr = document.getElementById(`desc-wrap-${i}`);
+          if (wr) {
+            wr.scrollIntoView({behavior: 'smooth', block: 'center'});
+            document.getElementById(`desc-${i}`).focus();
+          }
+          return;
+        } else {
+          descricoes[p] = desc;
+        }
+      }
+      // caso 'Não respondido', considerar como em branco (poderia alertar, mas mantive permissivo)
+    }
+
+    // pegar dados do operador
+    const operador = document.getElementById("operador").value.trim();
+    const maquina = document.getElementById("maquina").value.trim();
+    const horimetro = document.getElementById("horimetro").value.trim();
+
+    // criar pdf com jsPDF + autoTable
+    const doc = new jsPDF({unit: 'pt', format: 'a4'});
+    const marginLeft = 40;
+    let y = 40;
+
+    // cabeçalho
+    doc.setFontSize(16);
+    doc.setTextColor(0,0,0);
+    doc.text("Relatório Diário - Empilhadeira", doc.internal.pageSize.getWidth()/2, y, { align: 'center' });
+    y += 24;
+
+    doc.setFontSize(10);
+    const meta = `Operador: ${operador}    |    Máquina: ${maquina}    |    Horímetro: ${horimetro}    |    Data/Hora: ${dataHoraAtual}`;
+    doc.text(meta, marginLeft, y);
+    y += 18;
+
+    // linha separadora
+    doc.setDrawColor(0,0,0);
+    doc.setLineWidth(0.5);
+    doc.line(marginLeft, y, doc.internal.pageSize.getWidth() - marginLeft, y);
+    y += 14;
+
+    // Preparar dados para autoTable: colunas: ITEM | SITUAÇÃO | DESCRIÇÃO
+    const head = [['ITEM', 'SITUAÇÃO', 'DESCRIÇÃO']];
+    const body = perguntas.map((p) => {
+      const sit = respostas[p] === 'Sim' ? 'OK' : (respostas[p] === 'Não' ? 'NÃO' : 'Não respondido');
+      const desc = (respostas[p] === 'Não') ? (descricoes[p] || '') : '';
+      return [p, sit, desc];
+    });
+
+    // autoTable options
+    doc.autoTable({
+      startY: y,
+      head: head,
+      body: body,
+      styles: { fontSize: 9, textColor: 20 },
+      headStyles: { fillColor: [200,200,200], textColor: [0,0,0], halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 260 }, // ITEM
+        1: { cellWidth: 60, halign: 'center' }, // SITUAÇÃO
+        2: { cellWidth: doc.internal.pageSize.getWidth() - marginLeft*2 - 320 } // DESCRIÇÃO (restante)
+      },
+      didDrawCell: function (data) {
+        // destacar texto da coluna 'SITUAÇÃO' quando NÃO (em vermelho)
+        if (data.column.index === 1 && data.cell.section === 'body') {
+          const text = data.cell.text[0];
+          if (text === 'NÃO') {
+            // sobreescreve o texto em vermelho
+            const x = data.cell.textPos.x;
+            const yText = data.cell.textPos.y;
+            doc.setTextColor(200, 0, 0);
+            doc.text(text, x, yText, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
+          }
+        }
+      },
+      margin: { left: marginLeft, right: marginLeft },
+      pageBreak: 'auto'
+    });
+
+    // salvar PDF com nome contendo operador e data
+    const safeName = operador ? operador.replace(/\s+/g, '_') : 'Operador';
+    const filename = `Relatorio_${safeName}_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+  }
+</script>
+
+</body>
+</html>
