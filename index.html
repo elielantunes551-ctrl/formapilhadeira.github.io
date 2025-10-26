@@ -1,109 +1,412 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checklist Empilhadeira - Garret Formação e Segurança</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checklist Empilhadeira - Log20 Modificado</title>
+
 <style>
-body { font-family: Arial, sans-serif; background: #0d1f0d; color: #fff; margin: 0; padding: 20px; }
-h2 { text-align: center; }
-.container { max-width: 700px; margin: auto; background: #1f3b1f; padding: 20px; border-radius: 10px; }
-input, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: none; }
-button { background: #198754; color: white; font-weight: bold; cursor: pointer; }
-button:hover { background: #157347; }
-.item { margin-bottom: 10px; padding: 10px; background: #2e4c2e; border-radius: 6px; }
-label { display: block; margin-bottom: 6px; font-weight: bold; }
-.btn-group button { width: 48%; margin-right: 2%; }
-.btn-yes { background: #28a745; }
-.btn-no { background: #dc3545; }
+  /* Manter cores originais e otimizar layout */
+  body {
+    font-family: Arial, sans-serif;
+    background: #0d1f0d;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+  }
+  .container {
+    max-width: 700px;
+    margin: auto;
+    background: #1f3b1f;
+    padding: 20px 30px;
+    border-radius: 10px;
+  }
+  h2 {
+    text-align: center;
+  }
+  #logo {
+    display: block;
+    margin: 0 auto 20px auto;
+    max-width: 150px;
+  }
+  label {
+    font-weight: bold;
+    margin-top: 15px;
+    display: block;
+  }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  button {
+    width: 48%;
+    padding: 12px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    color: #fff;
+    margin-top: 15px;
+    font-size: 18px;
+    transition: all 0.3s ease;
+  }
+  button:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+  .btn-yes {
+    background: #28a745;
+  }
+  .btn-no {
+    background: #dc3545;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .hidden {
+    display: none;
+  }
+  #item-checklist p {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  #item-checklist img {
+    height: 48px;
+    width: 48px;
+    object-fit: contain;
+  }
+  #resumo-lista {
+    margin-top: 15px;
+    background: #2e4c2e;
+    padding: 15px;
+    border-radius: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  #resumo-lista p {
+    font-size: 16px;
+    margin: 6px 0;
+    word-break: break-word;
+  }
+  #btn-pdf {
+    margin-top: 20px;
+    background: #198754;
+    width: 100%;
+  }
+  .info {
+    font-size: 14px;
+    color: #ccc;
+    margin-top: 10px;
+    text-align: center;
+  }
+  textarea {
+    width: 100%;
+    height: 70px;
+    border-radius: 6px;
+    border: none;
+    padding: 8px;
+    font-size: 14px;
+    margin-top: 10px;
+    box-sizing: border-box;
+  }
 </style>
+
 </head>
 <body>
 
-<div class="container">
-  <h2>Checklist Diário - Empilhadeira</h2>
-  <label>Nome do Operador:</label>
-  <input id="operador" type="text" placeholder="Digite o nome do operador">
+<!-- Página Inicial -->
+<div id="pagina-inicial" class="container">
+  <img id="logo" src="https://www.log20.com.br/wp-content/uploads/2021/04/logotipo-log20-vetor.png" alt="Log20 Logística Logo" />
+  <h2>Checklist Diário - Empilhadeira Log20</h2>
 
-  <label>Número da Máquina:</label>
-  <input id="maquina" type="text" placeholder="Digite o número da máquina">
+  <label for="operador">Nome do Operador</label>
+  <input type="text" id="operador" placeholder="Digite o nome do operador" />
 
-  <div id="checklist"></div>
-  <button onclick="gerarPDF()">Gerar PDF</button>
+  <label for="maquina">Número da Máquina</label>
+  <input type="text" id="maquina" placeholder="Digite o número da máquina" />
+
+  <label for="horimetro">Horímetro</label>
+  <input type="number" id="horimetro" step="0.1" placeholder="ex: 3456.7" min="0" />
+
+  <button id="btn-iniciar">Iniciar Checklist</button>
+
+  <div class="info">Preencha os campos acima e clique em Iniciar Checklist.</div>
+</div>
+
+<!-- Página do Checklist por Item -->
+<div id="pagina-checklist" class="container hidden">
+  <h2>Checklist Diário</h2>
+  <div class="info" id="info-operador"></div>
+  <div class="info" id="data-hora"></div>
+
+  <div id="item-checklist">
+    <!-- Item atual com imagem será inserido aqui -->
+  </div>
+
+  <button id="btn-prev" class="hidden">Anterior</button>
+  <button id="btn-next" class="hidden">Próximo</button>
+
+  <button id="btn-pdf" disabled>Gerar Relatório PDF</button>
+  <button id="btn-voltar">Voltar ao Início</button>
+</div>
+
+<!-- Página de Sucesso -->
+<div id="pagina-sucesso" class="container hidden">
+  <h2>Checklist executado com sucesso!</h2>
+  <div class="info">O PDF foi gerado e salvo no seu dispositivo.</div>
+  <button id="btn-reinicio">Voltar ao Início</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
 <script>
-const { jsPDF } = window.jspdf;
+  const perguntas = [
+    { texto: "Pontos de apoio estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/support.png" },
+    { texto: "Painel de instrumentos está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/gauge.png" },
+    { texto: "Sensor de banco está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/seatbelt.png" },
+    { texto: "Cinto de segurança está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/seatbelt.png" },
+    { texto: "Buzina está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/horn.png" },
+    { texto: "Sensor de cinto está OK? Corta acelerador ou desliga máquina quando removido cinto?", img: "https://img.icons8.com/ios-filled/50/ffffff/seatbelt.png" },
+    { texto: "Limpador de para-brisas está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/wiper.png" },
+    { texto: "Para-brisa e teto estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/windshield.png" },
+    { texto: "Retrovisores estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/side-mirror.png" },
+    { texto: "Freios estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/brake-pad.png" },
+    { texto: "Extintor validade, lacre e carga estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/fire-extinguisher.png" },
+    { texto: "LEDs laterais estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/led-light.png" },
+    { texto: "Blue Spot está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/spotlight.png" },
+    { texto: "Lâmpadas dianteiras estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/headlight.png" },
+    { texto: "Lâmpadas traseiras estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/rear-light.png" },
+    { texto: "Sirene de ré está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/siren.png" },
+    { texto: "Ausência de vazamento de óleo?", img: "https://img.icons8.com/ios-filled/50/ffffff/oil.png" },
+    { texto: "Mangueiras da torre estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/hose.png" },
+    { texto: "Garfo gádi está OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/forklift.png" },
+    { texto: "Pneus estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/tires.png" },
+    { texto: "Rodas trincas e parafusos estão OK?", img: "https://img.icons8.com/ios-filled/50/ffffff/repair.png" },
+  ];
 
-const perguntas = [
-  "Pontos de apoio estão OK?",
-  "Partida com senha, está OK?",
-  "Painel de instrumentos está OK?",
-  "Sensor de banco está OK?",
-  "Cinto de segurança está desligando ou impedindo aceleração?",
-  "Buzina está OK?",
-  "Limpador de para-brisas está OK?",
-  "Para-brisa e teto estão OK?",
-  "Retrovisores estão OK?",
-  "Freios estão OK?",
-  "Extintor (validade, lacre e carga) está OK?",
-  "LEDs laterais estão OK?",
-  "Blue Spot está OK?",
-  "Lâmpadas dianteiras estão OK?",
-  "Lâmpadas traseiras estão OK?",
-  "Sirene de ré está OK?",
-  "Ausência de vazamento de óleo?",
-  "Mangueiras da torre estão OK?",
-  "Garfo (trava e borracha de proteção) está OK?",
-  "Pneus estão OK?",
-  "Rodas (trincas e parafusos) estão OK?"
-];
+  let respostas = Array(perguntas.length).fill(null);
+  let descricoes = Array(perguntas.length).fill("");
+  let atualIndex = 0;
+  let startTime = 0;
+  let alertMostrado = false;
 
-const respostas = {};
+  const operadorInput = document.getElementById("operador");
+  const maquinaInput = document.getElementById("maquina");
+  const horimetroInput = document.getElementById("horimetro");
+  const paginaInicial = document.getElementById("pagina-inicial");
+  const paginaChecklist = document.getElementById("pagina-checklist");
+  const paginaSucesso = document.getElementById("pagina-sucesso");
+  const infoOperador = document.getElementById("info-operador");
+  const dataHora = document.getElementById("data-hora");
+  const itemChecklistDiv = document.getElementById("item-checklist");
+  const btnPdf = document.getElementById("btn-pdf");
+  const btnVoltar = document.getElementById("btn-voltar");
+  const btnInicio = document.getElementById("btn-iniciar");
+  const btnReinicio = document.getElementById("btn-reinicio");
 
-const checklistDiv = document.getElementById("checklist");
+  btnInicio.addEventListener('click', iniciarChecklist);
+  btnPdf.addEventListener('click', gerarPDF);
+  btnVoltar.addEventListener('click', voltarInicio);
+  btnReinicio.addEventListener('click', voltarInicio);
 
-perguntas.forEach((p, i) => {
-  const div = document.createElement("div");
-  div.className = "item";
-  div.innerHTML = `
-    <label>${p}</label>
-    <div class="btn-group">
-      <button class="btn-yes" onclick="responder(${i}, 'Sim')">Sim</button>
-      <button class="btn-no" onclick="responder(${i}, 'Não')">Não</button>
-    </div>
-  `;
-  checklistDiv.appendChild(div);
-});
+  function iniciarChecklist() {
+    const operador = operadorInput.value.trim();
+    const maquina = maquinaInput.value.trim();
+    const horimetro = horimetroInput.value.trim();
+    if (!operador || !maquina || !horimetro) {
+      alert('Por favor, preencha o nome do operador, número da máquina e o horímetro.');
+      return;
+    }
+    atualIndex = 0;
+    respostas.fill(null);
+    descricoes.fill("");
+    alertMostrado = false;
+    startTime = Date.now();
+    paginaInicial.classList.add('hidden');
+    paginaChecklist.classList.remove('hidden');
+    paginaSucesso.classList.add('hidden');
+    infoOperador.textContent = `Operador: ${operador} | Máquina: ${maquina} | Horímetro: ${horimetro}`;
+    dataHora.textContent = `Data e hora do checklist: ${new Date().toLocaleString('pt-BR')}`;
+    btnPdf.disabled = true;
+    mostrarItem(atualIndex);
+  }
 
-function responder(indice, valor) {
-  respostas[perguntas[indice]] = valor;
-}
+  function mostrarItem(index) {
+    itemChecklistDiv.innerHTML = "";
+    const p = document.createElement('p');
+    p.style.fontSize = '20px';
 
-function gerarPDF() {
-  const doc = new jsPDF();
-  const operador = document.getElementById("operador").value;
-  const maquina = document.getElementById("maquina").value;
-  let y = 10;
+    const img = document.createElement('img');
+    img.src = perguntas[index].img;
+    img.alt = perguntas[index].texto;
+    img.loading = "lazy";
 
-  doc.setFontSize(14);
-  doc.text("Checklist Diário - Empilhadeira", 10, y);
-  y += 10;
-  doc.setFontSize(12);
-  doc.text(`Operador: ${operador}`, 10, y);
-  y += 7;
-  doc.text(`Número da Máquina: ${maquina}`, 10, y);
-  y += 10;
+    p.appendChild(img);
+    p.appendChild(document.createTextNode(` ${index + 1} de ${perguntas.length}: ${perguntas[index].texto}`));
 
-  perguntas.forEach(p => {
-    doc.text(`${p} - ${respostas[p] || 'Não respondido'}`, 10, y);
-    y += 7;
-    if (y > 270) { doc.addPage(); y = 10; }
-  });
+    itemChecklistDiv.appendChild(p);
 
-  doc.save(`Checklist_${operador || 'Operador'}.pdf`);
-}
+    const btnSim = document.createElement('button');
+    btnSim.textContent = "Sim";
+    btnSim.classList.add('btn-yes');
+    btnSim.onclick = () => responder(index, 'Sim');
+
+    const btnNao = document.createElement('button');
+    btnNao.textContent = "Não";
+    btnNao.classList.add('btn-no');
+    btnNao.onclick = () => responder(index, 'Não');
+
+    itemChecklistDiv.appendChild(btnSim);
+    itemChecklistDiv.appendChild(btnNao);
+
+    // Se respondeu "Não", mostrar textarea para descrição
+    if (respostas[index] === 'Não') {
+      const descLabel = document.createElement('label');
+      descLabel.textContent = 'Descreva o problema (obrigatório se Não):';
+      itemChecklistDiv.appendChild(descLabel);
+
+      const descTextarea = document.createElement('textarea');
+      descTextarea.value = descricoes[index];
+      descTextarea.oninput = (e) => {
+        descricoes[index] = e.target.value.trim();
+      };
+      itemChecklistDiv.appendChild(descTextarea);
+      descTextarea.focus();
+    }
+  }
+
+  function responder(index, resposta) {
+    if (index === 0 && !alertMostrado) {
+      alert('O checklist tem tempo mínimo obrigatório de 3 minutos. Você poderá gerar o relatório somente após esse tempo.');
+      alertMostrado = true;
+    }
+
+    respostas[index] = resposta;
+    if (resposta === 'Sim') {
+      descricoes[index] = "";
+    }
+    if(atualIndex < perguntas.length - 1){
+      atualIndex++;
+      mostrarItem(atualIndex);
+    } else {
+      mostrarResumo();
+    }
+  }
+
+  function mostrarResumo() {
+    itemChecklistDiv.innerHTML = '<h3>Resumo das respostas</h3>';
+    const lista = document.createElement('div');
+    lista.id = 'resumo-lista';
+
+    perguntas.forEach((p, i) => {
+      const pResp = document.createElement('p');
+      const situacao = respostas[i] === 'Sim' ? 'OK' : respostas[i] === 'Não' ? 'NÃO' : 'Não respondido';
+      const desc = descricoes[i] ? ` - ${descricoes[i]}` : '';
+      pResp.textContent = `Item ${i + 1}: ${p.texto} - ${situacao}${desc}`;
+      lista.appendChild(pResp);
+    });
+
+    itemChecklistDiv.appendChild(lista);
+    btnPdf.disabled = false; // Botão liberado na página de resumo
+  }
+
+  function validarParaGerar() {
+    let passou = true;
+    for (let i = 0; i < perguntas.length; i++) {
+      if (respostas[i] === 'Não' && (!descricoes[i] || descricoes[i].length === 0)) {
+        alert(`Por favor, descreva o problema para o item ${i + 1} antes de gerar o PDF.`);
+        atualIndex = i;
+        mostrarItem(atualIndex);
+        passou = false;
+        break;
+      }
+    }
+    if(Date.now() - startTime < 180000){
+      alert("Por favor, aguarde o tempo mínimo de 3 minutos antes de gerar o relatório.");
+      passou = false;
+    }
+    return passou;
+  }
+
+  async function gerarPDF() {
+    if (!validarParaGerar()) {
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const operador = operadorInput.value.trim();
+    const maquina = maquinaInput.value.trim();
+    const horimetro = horimetroInput.value.trim();
+    const dataHoraTexto = new Date().toLocaleString('pt-BR');
+
+    doc.setFontSize(16);
+    doc.text('Relatório Diário - Empilhadeira', 105, 20, null, null, 'center');
+
+    doc.setFontSize(10);
+    doc.text(`Operador: ${operador}`, 14, 35);
+    doc.text(`Máquina: ${maquina}`, 14, 42);
+    doc.text(`Horímetro: ${horimetro}`, 14, 49);
+    doc.text(`Data e Hora: ${dataHoraTexto}`, 14, 56);
+
+    const body = perguntas.map((p, i) => {
+      let situacao = respostas[i] === 'Sim' ? 'OK' : respostas[i] === 'Não' ? 'NÃO' : 'Não respondido';
+      let descricao = descricoes[i] || '';
+      return [p.texto, situacao, descricao];
+    });
+
+    doc.autoTable({
+      head: [['Item', 'Situação', 'Descrição']],
+      body: body,
+      startY: 65,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [200, 200, 200] },
+      columnStyles: {
+        0: { cellWidth: 85 },
+        1: { cellWidth: 25, halign: 'center' },
+        2: { cellWidth: 85 }
+      },
+      didParseCell: function (data) {
+        if (data.column.index === 1 && data.cell.section === 'body') {
+          if (data.cell.text[0] === 'NÃO') data.cell.styles.textColor = [220, 53, 69];
+        }
+      }
+    });
+
+    const safeName = operador.replace(/W/g, '') || 'Operador';
+    const filename = `Relatorio_${safeName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+    try {
+      doc.save(filename);
+      paginaChecklist.classList.add('hidden');
+      paginaSucesso.classList.remove('hidden');
+    } catch (e) {
+      alert('PDF gerado, mas ocorreu um erro ao salvar automaticamente. Verifique as permissões do navegador.');
+    }
+  }
+
+  function voltarInicio() {
+    paginaInicial.classList.remove('hidden');
+    paginaChecklist.classList.add('hidden');
+    paginaSucesso.classList.add('hidden');
+    respostas.fill(null);
+    descricoes.fill("");
+    atualIndex = 0;
+    alertMostrado = false;
+    btnPdf.disabled = true;
+    operadorInput.value = "";
+    maquinaInput.value = "";
+    horimetroInput.value = "";
+  }
 </script>
 
 </body>
